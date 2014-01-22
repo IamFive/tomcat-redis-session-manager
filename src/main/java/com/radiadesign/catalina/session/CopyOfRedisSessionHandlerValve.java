@@ -4,13 +4,14 @@ import java.io.IOException;
 
 import javax.servlet.ServletException;
 
+import org.apache.catalina.Session;
 import org.apache.catalina.connector.Request;
 import org.apache.catalina.connector.Response;
 import org.apache.catalina.valves.ValveBase;
 import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
 
-public class RedisSessionHandlerValve extends ValveBase {
+public class CopyOfRedisSessionHandlerValve extends ValveBase {
 	private final Log log = LogFactory.getLog(RedisSessionManager.class);
 	private RedisSessionManager manager;
 
@@ -20,19 +21,20 @@ public class RedisSessionHandlerValve extends ValveBase {
 
 	@Override
 	public void invoke(Request request, Response response) throws IOException, ServletException {
+
 		try {
 			getNext().invoke(request, response);
 		} finally {
-			storeOrRemoveSession();
+			final Session session = request.getSessionInternal(false);
+			String sessionId = manager.getCurrentSessionId();
+			storeOrRemoveSession(sessionId, session);
 			manager.afterRequest();
 		}
 	}
 
-	private void storeOrRemoveSession() {
+	private void storeOrRemoveSession(String sessionId, Session session) {
 		try {
-			RedisSession session = manager.getCurrentSession();
 			if (session != null) {
-
 				if (session.isValid()) {
 					log.trace("Request with session completed, saving session " + session.getId());
 					if (session.getSession() != null) {
@@ -43,13 +45,13 @@ public class RedisSessionHandlerValve extends ValveBase {
 					}
 				} else {
 					log.trace("HTTP Session has been invalidated, removing :" + session.getId());
-					session = (RedisSession) manager.createSession(session.getId());
-					manager.save(session);
+					manager.remove(session);
 				}
+			} else if (sessionId != null) {
+				manager.removeById(sessionId);
 			}
 		} catch (Exception e) {
 			// Do nothing.
-			log.warn("", e);
 		}
 	}
 }
