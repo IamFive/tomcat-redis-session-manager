@@ -393,7 +393,8 @@ public class RedisSessionManager extends ManagerBase implements Lifecycle {
 				log.trace("Session " + id + " not found in Redis");
 				session = null;
 			} else if (Arrays.equals(NULL_SESSION, data)) {
-				throw new IllegalStateException("Race condition encountered: attempted to load session[" + id
+				jedis.del(id.getBytes()); // Woo edit here.
+				throw new IOException("Race condition encountered: attempted to load session[" + id
 						+ "] which has been created but not yet serialized.");
 			} else {
 				log.trace("Deserializing session " + id + " from Redis");
