@@ -309,6 +309,7 @@ public class RedisSessionManager extends ManagerBase implements Lifecycle {
 		}
 	}
 
+	@SuppressWarnings("null")
 	@Override
 	public Session findSession(String id) throws IOException {
 		RedisSession session;
